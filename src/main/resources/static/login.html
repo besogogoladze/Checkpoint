@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Connexion — Checkpoint</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+    >
+</head>
+
+<body class="login-page">
+
+<div class="login-shell">
+
+    <aside class="login-side">
+
+        <div class="login-side-content">
+
+            <span class="login-side-label">
+                Sécurité connectée
+            </span>
+
+            <h2>
+                Chaque ronde.<br>
+                Chaque checkpoint.<br>
+                <span>Enregistré.</span>
+            </h2>
+
+            <p>
+                Une solution simple pour valider les passages des agents,
+                superviser les zones sécurisées et conserver un historique
+                fiable des rondes.
+            </p>
+
+            <div class="login-features">
+
+                <div class="login-feature">
+                    <span class="login-feature-icon">✓</span>
+
+                    <div>
+                        <strong>Validation NFC</strong>
+
+                        <p>
+                            Enregistrement physique de chaque checkpoint.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="login-feature">
+                    <span class="login-feature-icon">✓</span>
+
+                    <div>
+                        <strong>Temps réel</strong>
+
+                        <p>
+                            Mise à jour immédiate du poste de sécurité.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="login-feature">
+                    <span class="login-feature-icon">✓</span>
+
+                    <div>
+                        <strong>Traçabilité</strong>
+
+                        <p>
+                            Historique complet des rondes et des gardiens.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </aside>
+
+    <main class="login-main">
+
+        <div class="login-container">
+
+            <a href="index.html" class="login-brand">
+                <span class="login-brand-mark">CP</span>
+
+                <span class="login-brand-text">
+                    <strong>Checkpoint</strong>
+                    <small>Supervision NFC</small>
+                </span>
+            </a>
+
+            <section class="login-card">
+
+                <div class="login-heading">
+
+                    <img class="img-logo" src="./assets/Gemini_Generated_Image_hqhwnthqhwnthqhw.png" alt="CP" />
+
+                    <h1 class="connexion">Connexion</h1>
+
+                    <p>
+                        Utilisez votre identifiant professionnel
+                        et votre code PIN.
+                    </p>
+                </div>
+
+                <form id="loginForm" class="login-form">
+
+                    <div class="form-group">
+                        <label for="badge">
+                            Identifiant badge
+                        </label>
+
+                        <div class="input-wrapper">
+
+                            <span
+                                    class="input-icon"
+                                    aria-hidden="true"
+                            >
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                            d="M12 12a4 4 0 1 0 0-8
+                                           4 4 0 0 0 0 8Zm7 8
+                                           a7 7 0 0 0-14 0"
+                                    />
+                                </svg>
+                            </span>
+
+                            <input
+                                    id="badge"
+                                    name="badge"
+                                    type="text"
+                                    placeholder="Exemple : G001"
+                                    autocomplete="username"
+                                    required
+                            >
+
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+
+                        <div class="label-row">
+                            <label for="pin">
+                                Code PIN
+                            </label>
+
+                            <span>4 chiffres</span>
+                        </div>
+
+                        <div class="input-wrapper">
+
+                            <span
+                                    class="input-icon"
+                                    aria-hidden="true"
+                            >
+                                <svg viewBox="0 0 24 24">
+                                    <rect
+                                            x="5"
+                                            y="10"
+                                            width="14"
+                                            height="10"
+                                            rx="2"
+                                    />
+
+                                    <path
+                                            d="M8 10V7a4 4 0 0 1 8 0v3"
+                                    />
+                                </svg>
+                            </span>
+
+                            <input
+                                    id="pin"
+                                    name="pin"
+                                    type="password"
+                                    inputmode="numeric"
+                                    maxlength="8"
+                                    placeholder="••••"
+                                    autocomplete="current-password"
+                                    required
+                            >
+
+                            <button
+                                    type="button"
+                                    id="togglePin"
+                                    class="toggle-password"
+                                    aria-label="Afficher le code PIN"
+                            >
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                            d="M2 12s3.5-6 10-6
+                                           10 6 10 6-3.5 6-10 6
+                                           S2 12 2 12Z"
+                                    />
+
+                                    <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="3"
+                                    />
+                                </svg>
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <button
+                            id="loginButton"
+                            class="login-submit"
+                            type="submit"
+                    >
+                        <span>
+                            Se connecter
+                        </span>
+
+                        <span class="login-button-arrow">
+                            →
+                        </span>
+                    </button>
+
+                    <div
+                            id="status"
+                            class="login-status"
+                            role="status"
+                            aria-live="polite"
+                    ></div>
+
+                </form>
+
+            </section>
+
+            <div class="login-footer">
+
+                <a href="index.html">
+                    ← Retour à l’accueil
+                </a>
+
+                <p>
+                    Accès réservé au personnel autorisé
+                </p>
+
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+<script src="app-common.js"></script>
+
+<script>
+    const loginForm =
+        document.getElementById("loginForm");
+
+    const loginButton =
+        document.getElementById("loginButton");
+
+    const togglePinButton =
+        document.getElementById("togglePin");
+
+    const pinInput =
+        document.getElementById("pin");
+
+    async function login() {
+        const badge =
+            document.getElementById(
+                "badge"
+            ).value.trim();
+
+        const pin =
+            pinInput.value.trim();
+
+        const status =
+            document.getElementById(
+                "status"
+            );
+
+        if (!badge || !pin) {
+            status.textContent =
+                "Veuillez remplir tous les champs.";
+
+            status.className =
+                "login-status error";
+
+            return;
+        }
+
+        loginButton.disabled = true;
+        loginButton.classList.add("loading");
+
+        status.textContent =
+            "Vérification de vos accès...";
+
+        status.className =
+            "login-status loading-status";
+
+        try {
+            const response = await fetch(
+                "/api/auth/login",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body: JSON.stringify({
+                        badge,
+                        pin
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const body =
+                    await response
+                        .json()
+                        .catch(() => ({}));
+
+                throw new Error(
+                    body.message ||
+                    "Identifiant ou code PIN incorrect."
+                );
+            }
+
+            const data =
+                await response.json();
+
+            setSession(
+                data.token,
+                data.role,
+                data.guardName
+            );
+
+            status.textContent =
+                "Connexion réussie. Bienvenue, " +
+                data.guardName +
+                ".";
+
+            status.className =
+                "login-status success";
+
+            loginButton.classList.remove(
+                "loading"
+            );
+
+            loginButton.classList.add(
+                "success-button"
+            );
+
+            const params =
+                new URLSearchParams(
+                    window.location.search
+                );
+
+            const next =
+                params.get("next") ||
+                "index.html";
+
+            setTimeout(() => {
+                window.location.href = next;
+            }, 700);
+
+        } catch (error) {
+            status.textContent =
+                error.message;
+
+            status.className =
+                "login-status error";
+
+            loginButton.disabled = false;
+
+            loginButton.classList.remove(
+                "loading"
+            );
+        }
+    }
+
+    loginForm.addEventListener(
+        "submit",
+        (event) => {
+            event.preventDefault();
+            login();
+        }
+    );
+
+    togglePinButton.addEventListener(
+        "click",
+        () => {
+            const pinIsVisible =
+                pinInput.type === "text";
+
+            pinInput.type =
+                pinIsVisible
+                    ? "password"
+                    : "text";
+
+            togglePinButton.setAttribute(
+                "aria-label",
+                pinIsVisible
+                    ? "Afficher le code PIN"
+                    : "Masquer le code PIN"
+            );
+        }
+    );
+</script>
+
+</body>
+</html>

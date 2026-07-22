@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Supervision des rondes NFC</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+    >
+</head>
+
+<body class="app-page">
+
+<header id="header"></header>
+
+<main class="page-shell">
+
+    <section class="home-hero">
+        <img class="img-logo" src="./assets/Gemini_Generated_Image_hqhwnthqhwnthqhw.png" alt="CP" />
+
+        <span class="page-eyebrow">Système de sécurité NFC</span>
+
+        <h2>Tableau de bord</h2>
+
+        <p>
+            Supervisez les rondes, validez les checkpoints et consultez
+            les derniers passages depuis une seule interface.
+        </p>
+    </section>
+
+    <section class="grid-actions">
+
+        <a href="scan.html" class="action-card">
+            <span class="action-icon">🛡️</span>
+
+            <div class="action-card-content">
+                <h3>Ronde gardien</h3>
+
+                <p>
+                    Scanner un checkpoint NFC et enregistrer le passage
+                    pendant une ronde de sécurité.
+                </p>
+            </div>
+
+            <span class="action-arrow">→</span>
+        </a>
+
+        <a href="dashboard.html" class="action-card">
+            <span class="action-icon">◉</span>
+
+            <div class="action-card-content">
+                <h3>Supervision</h3>
+
+                <p>
+                    Consulter en temps réel l’état de tous les checkpoints
+                    depuis le poste de sécurité.
+                </p>
+            </div>
+
+            <span class="action-arrow">→</span>
+        </a>
+
+        <a href="history.html" class="action-card">
+            <span class="action-icon">⌚</span>
+
+            <div class="action-card-content">
+                <h3>Historique</h3>
+
+                <p>
+                    Retrouver les passages enregistrés, les gardiens
+                    et les synchronisations hors ligne.
+                </p>
+            </div>
+
+            <span class="action-arrow">→</span>
+        </a>
+
+        <a href="enroll.html" class="action-card">
+            <span class="action-icon">⚙</span>
+
+            <div class="action-card-content">
+                <h3>Administration</h3>
+
+                <p>
+                    Associer les patches NFC aux zones sécurisées
+                    et consulter leur état.
+                </p>
+            </div>
+
+            <span class="action-arrow">→</span>
+        </a>
+
+    </section>
+
+</main>
+
+<script src="app-common.js"></script>
+
+<script>
+    const session = getSession();
+
+    if (session.token) {
+        renderHeader("header", "CheckPoint NFC");
+    } else {
+        document.getElementById("header").innerHTML = `
+            <h1>CheckPoint</h1>
+
+            <div class="header-actions">
+                <a href="login.html" class="button">
+                    Connexion
+                </a>
+            </div>
+        `;
+    }
+</script>
+
+</body>
+</html>

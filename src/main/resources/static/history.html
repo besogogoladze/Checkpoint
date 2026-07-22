@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Historique des passages — Rondes NFC</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+    >
+</head>
+
+<body class="app-page">
+
+<header id="header"></header>
+
+<main class="page-shell">
+
+    <section class="page-heading page-heading-inline">
+
+        <div class="page-heading-content">
+            <span class="page-eyebrow">Traçabilité</span>
+
+            <h1>Historique des passages</h1>
+
+            <p>
+                Consultez les validations de checkpoints et identifiez
+                les transmissions directes ou synchronisées hors ligne.
+            </p>
+        </div>
+
+        <span class="badge badge-accent" id="scopeInfo"></span>
+
+    </section>
+
+    <section class="card">
+
+        <div id="filterSection" class="history-filters">
+
+            <div class="form-group">
+                <label for="roomFilter">
+                    Filtrer par zone
+                </label>
+
+                <select id="roomFilter">
+                    <option value="">
+                        Toutes les zones
+                    </option>
+                </select>
+            </div>
+
+            <button type="button" onclick="load()">
+                Actualiser
+            </button>
+
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                <tr>
+                    <th>Date et heure</th>
+                    <th>Zone</th>
+                    <th>Gardien</th>
+                    <th>Transmission</th>
+                </tr>
+                </thead>
+
+                <tbody id="body">
+                <tr>
+                    <td colspan="4" class="table-empty">
+                        Chargement de l’historique...
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+</main>
+
+<script src="app-common.js"></script>
+
+<script>
+    const session = requireAuth([
+        "GARDIEN",
+        "CHEF_DE_POSTE",
+        "DIRECTION"
+    ]);
+
+    renderHeader("header", "Historique");
+
+    document.getElementById(
+        "scopeInfo"
+    ).textContent =
+        session.role === "GARDIEN"
+            ? "🔒 Vos passages"
+            : "👁 Vue globale";
+
+    async function loadRoomsFilter() {
+        if (session.role === "GARDIEN") {
+            document.getElementById(
+                "filterSection"
+            ).style.display = "none";
+
+            return;
+        }
+
+        try {
+            const rooms =
+                await apiFetch("/api/rooms");
+
+            const select =
+                document.getElementById("roomFilter");
+
+            select.innerHTML += rooms.map((room) => `
+                <option value="${room.id}">
+                    ${room.name}
+                </option>
+            `).join("");
+
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function load() {
+        const roomId =
+            document.getElementById(
+                "roomFilter"
+            ).value;
+
+        const query = roomId
+            ? "?roomId=" + roomId
+            : "";
+
+        try {
+            const entries =
+                await apiFetch("/api/history" + query);
+
+            const body =
+                document.getElementById("body");
+
+            if (entries.length === 0) {
+                body.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="table-empty">
+                            Aucun passage enregistré.
+                        </td>
+                    </tr>
+                `;
+
+                return;
+            }
+
+            body.innerHTML = entries.map((entry) => {
+                const transmissionClass =
+                    entry.offlineSync
+                        ? "ORANGE"
+                        : "VERT";
+
+                const transmissionLabel =
+                    entry.offlineSync
+                        ? "Hors ligne"
+                        : "Direct";
+
+                return `
+                    <tr>
+                        <td>
+                            ${new Date(
+                                entry.scannedAt
+                            ).toLocaleString("fr-FR")}
+                        </td>
+
+                        <td>
+                            <strong>${entry.roomName}</strong>
+                        </td>
+
+                        <td>${entry.guardName}</td>
+
+                        <td>
+                            <span class="badge ${transmissionClass}">
+                                ${transmissionLabel}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+
+        } catch (error) {
+            document.getElementById(
+                "body"
+            ).innerHTML = `
+                <tr>
+                    <td colspan="4" class="table-error">
+                        Erreur : ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    loadRoomsFilter().then(load);
+</script>
+
+</body>
+</html>

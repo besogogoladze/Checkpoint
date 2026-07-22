@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Supervision — PC Sécurité</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+    >
+</head>
+
+<body class="app-page">
+
+<header id="header"></header>
+
+<main class="page-shell">
+
+    <section class="page-heading page-heading-inline">
+        <div class="page-heading-content">
+            <span class="page-eyebrow">Poste de sécurité</span>
+
+            <h1>Supervision en temps réel</h1>
+
+            <p>
+                Consultez l’état des checkpoints et identifiez rapidement
+                les zones nécessitant une intervention.
+            </p>
+        </div>
+
+        <div id="wsStatus" class="badge live-status">
+            Connexion...
+        </div>
+    </section>
+
+    <section class="card">
+
+        <div class="card-header">
+            <div>
+                <h2>État des zones sécurisées</h2>
+
+                <p>
+                    Les checkpoints les plus critiques apparaissent en premier.
+                </p>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                <tr>
+                    <th>Zone</th>
+                    <th>Bâtiment / Étage</th>
+                    <th>Dernier contrôle</th>
+                    <th>Gardien</th>
+                    <th>Temps écoulé</th>
+                    <th>État</th>
+                </tr>
+                </thead>
+
+                <tbody id="roomsBody">
+                <tr>
+                    <td colspan="6" class="table-empty">
+                        Chargement des données...
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+</main>
+
+<script src="app-common.js"></script>
+
+<script>
+    const session = requireAuth(["CHEF_DE_POSTE", "DIRECTION"]);
+
+    renderHeader("header", "Supervision");
+
+    let rooms = [];
+
+    function formatElapsed(minutes) {
+        if (minutes === null || minutes === undefined) return "Aucun";
+        if (minutes < 1) return "À l'instant";
+        if (minutes < 60) return minutes + " min";
+
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+
+        return h + "h " + String(m).padStart(2, "0") + "m";
+    }
+
+    function levelFor(room) {
+        if (room.patchDamaged) return "ROUGE";
+
+        if (
+            room.lastScanAt === null ||
+            room.lastScanAt === undefined
+        ) {
+            return "ROUGE";
+        }
+
+        const elapsedMin = Math.floor(
+            (
+                Date.now() -
+                new Date(room.lastScanAt).getTime()
+            ) / 60000
+        );
+
+        if (elapsedMin < room.orangeThresholdMinutes) {
+            return "VERT";
+        }
+
+        if (elapsedMin < room.redThresholdMinutes) {
+            return "ORANGE";
+        }
+
+        return "ROUGE";
+    }
+
+    function currentElapsed(room) {
+        if (!room.lastScanAt) return null;
+
+        return Math.floor(
+            (
+                Date.now() -
+                new Date(room.lastScanAt).getTime()
+            ) / 60000
+        );
+    }
+
+    function render() {
+        const body = document.getElementById("roomsBody");
+
+        if (rooms.length === 0) {
+            body.innerHTML = `
+                <tr>
+                    <td colspan="6" class="table-empty">
+                        Aucun checkpoint disponible.
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        const sorted = [...rooms].sort((a, b) => {
+            const levelMap = {
+                "ROUGE": 0,
+                "ORANGE": 1,
+                "VERT": 2
+            };
+
+            const levelA = levelMap[levelFor(a)];
+            const levelB = levelMap[levelFor(b)];
+
+            if (levelA !== levelB) {
+                return levelA - levelB;
+            }
+
+            return (
+                currentElapsed(b) ?? Infinity
+            ) - (
+                currentElapsed(a) ?? Infinity
+            );
+        });
+
+        body.innerHTML = sorted.map((room) => {
+            const level = levelFor(room);
+
+            const guardLabel = room.patchDamaged
+                ? "⚠ Patch endommagé"
+                : (room.lastGuardName || "—");
+
+            const elapsed = currentElapsed(room);
+
+            const location = [
+                room.building,
+                room.floor
+            ].filter(Boolean).join(" / ") || "—";
+
+            const lastControl = room.lastScanAt
+                ? new Date(room.lastScanAt).toLocaleString(
+                    "fr-FR",
+                    {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        day: "2-digit",
+                        month: "2-digit"
+                    }
+                )
+                : "—";
+
+            return `
+                <tr class="row-${level}">
+                    <td>
+                        <strong>${room.name}</strong>
+                    </td>
+
+                    <td>${location}</td>
+
+                    <td>${lastControl}</td>
+
+                    <td>${guardLabel}</td>
+
+                    <td>${formatElapsed(elapsed)}</td>
+
+                    <td>
+                        <span class="badge ${level}">
+                            ${level}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    async function loadInitial() {
+        try {
+            rooms = await apiFetch("/api/rooms");
+            render();
+        } catch (error) {
+            document.getElementById("roomsBody").innerHTML = `
+                <tr>
+                    <td colspan="6" class="table-error">
+                        Impossible de charger les données.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function connectWs() {
+        const protocol =
+            window.location.protocol === "https:"
+                ? "wss:"
+                : "ws:";
+
+        const url =
+            protocol +
+            "//" +
+            window.location.host +
+            "/ws/supervision?token=" +
+            encodeURIComponent(session.token);
+
+        const ws = new WebSocket(url);
+
+        const wsStatusElement =
+            document.getElementById("wsStatus");
+
+        ws.onopen = () => {
+            wsStatusElement.textContent = "● Temps réel actif";
+            wsStatusElement.className = "badge VERT";
+        };
+
+        ws.onmessage = (event) => {
+            rooms = JSON.parse(event.data);
+            render();
+        };
+
+        ws.onclose = () => {
+            wsStatusElement.textContent = "● Déconnecté";
+            wsStatusElement.className = "badge ROUGE";
+
+            setTimeout(connectWs, 3000);
+        };
+
+        ws.onerror = () => {
+            ws.close();
+        };
+    }
+
+    loadInitial();
+    connectWs();
+
+    setInterval(render, 10000);
+</script>
+
+</body>
+</html>

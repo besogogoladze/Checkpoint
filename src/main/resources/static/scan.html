@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Scan de ronde — Rondes NFC</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+    >
+</head>
+
+<body class="app-page">
+
+<header id="header"></header>
+
+<main class="page-shell">
+
+    <div class="scan-layout">
+
+        <section class="card scan-card">
+
+            <div class="scan-visual">
+                <span class="scan-icon">⌁</span>
+            </div>
+
+            <span class="page-eyebrow">
+                Validation de checkpoint
+            </span>
+
+            <h2>Contrôle de passage</h2>
+
+            <p class="scan-description">
+                Approchez le téléphone du patch NFC installé dans la zone
+                afin d’enregistrer votre passage.
+            </p>
+
+            <button id="activateBtn" class="big-btn scan-action">
+                Activer le lecteur NFC
+            </button>
+
+            <div id="status" class="status-line"></div>
+
+            <div
+                    id="queueInfo"
+                    class="badge queue-badge is-hidden"
+            ></div>
+
+        </section>
+
+        <section
+                class="card fallback-card"
+                id="fallbackCard"
+                style="display: none;"
+        >
+
+            <div class="card-header">
+                <div>
+                    <h3>Mode de démonstration</h3>
+
+                    <p>
+                        Utilisez la saisie manuelle uniquement lorsque
+                        Web NFC n’est pas disponible.
+                    </p>
+                </div>
+            </div>
+
+            <div class="fallback-form">
+
+                <input
+                        id="manualUid"
+                        placeholder="UID du patch : 04:A2:B3..."
+                >
+
+                <button
+                        type="button"
+                        onclick="
+                        handleTagRead(
+                            document
+                                .getElementById('manualUid')
+                                .value
+                                .trim()
+                        )
+                    "
+                >
+                    Valider
+                </button>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</main>
+
+<script src="app-common.js"></script>
+
+<script>
+    requireAuth([
+        "GARDIEN",
+        "CHEF_DE_POSTE",
+        "DIRECTION"
+    ]);
+
+    renderHeader("header", "Scan de ronde");
+
+    const statusElement =
+        document.getElementById("status");
+
+    const queueInfoElement =
+        document.getElementById("queueInfo");
+
+    const QUEUE_KEY =
+        "rondes_offline_queue";
+
+    function readQueue() {
+        try {
+            return JSON.parse(
+                localStorage.getItem(QUEUE_KEY) || "[]"
+            );
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function writeQueue(queue) {
+        localStorage.setItem(
+            QUEUE_KEY,
+            JSON.stringify(queue)
+        );
+    }
+
+    function refreshQueueInfo() {
+        const queue = readQueue();
+
+        if (queue.length > 0) {
+            queueInfoElement.textContent =
+                "⏳ " +
+                queue.length +
+                " scan(s) en attente";
+
+            queueInfoElement.classList.remove(
+                "is-hidden"
+            );
+
+            queueInfoElement.style.display =
+                "inline-flex";
+        } else {
+            queueInfoElement.classList.add(
+                "is-hidden"
+            );
+
+            queueInfoElement.style.display =
+                "none";
+        }
+    }
+
+    refreshQueueInfo();
+
+    async function sendScan(tagUid, scannedAt) {
+        return apiFetch(
+            "/api/scan",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    tagUid,
+                    scannedAt
+                })
+            }
+        );
+    }
+
+    async function handleTagRead(tagUid) {
+        if (!tagUid) return;
+
+        const scannedAt =
+            new Date().toISOString();
+
+        statusElement.className =
+            "status-line";
+
+        statusElement.textContent =
+            "Enregistrement du passage...";
+
+        try {
+            const result =
+                await sendScan(
+                    tagUid,
+                    scannedAt
+                );
+
+            statusElement.className =
+                "status-line ok";
+
+            statusElement.innerHTML = `
+                <strong>Passage validé</strong><br>
+                ${result.roomName}
+                contrôlée par
+                ${result.guardName}
+                ${
+                    result.offlineSync
+                        ? "<br><small>Synchronisé depuis le mode hors ligne</small>"
+                        : ""
+                }
+            `;
+
+        } catch (error) {
+            const networkError =
+                error instanceof TypeError ||
+                error.message.includes(
+                    "Failed to fetch"
+                );
+
+            if (networkError) {
+                const queue = readQueue();
+
+                queue.push({
+                    tagUid,
+                    scannedAt
+                });
+
+                writeQueue(queue);
+                refreshQueueInfo();
+
+                statusElement.className =
+                    "status-line err";
+
+                statusElement.textContent =
+                    "Réseau indisponible. Le scan a été enregistré localement.";
+
+            } else {
+                statusElement.className =
+                    "status-line err";
+
+                statusElement.textContent =
+                    "Erreur : " + error.message;
+            }
+        }
+    }
+
+    async function flushQueue() {
+        const queue = readQueue();
+
+        if (queue.length === 0) return;
+
+        const remaining = [];
+
+        for (const item of queue) {
+            try {
+                await sendScan(
+                    item.tagUid,
+                    item.scannedAt
+                );
+            } catch (error) {
+                remaining.push(item);
+            }
+        }
+
+        writeQueue(remaining);
+        refreshQueueInfo();
+    }
+
+    window.addEventListener(
+        "online",
+        flushQueue
+    );
+
+    setInterval(flushQueue, 30000);
+
+    flushQueue();
+
+    document.getElementById(
+        "activateBtn"
+    ).addEventListener(
+        "click",
+        async () => {
+            if (!("NDEFReader" in window)) {
+                statusElement.className =
+                    "status-line err";
+
+                statusElement.textContent =
+                    "Web NFC n’est pas supporté par ce navigateur.";
+
+                document.getElementById(
+                    "fallbackCard"
+                ).style.display = "block";
+
+                return;
+            }
+
+            try {
+                const ndef = new NDEFReader();
+
+                await ndef.scan();
+
+                statusElement.className =
+                    "status-line ok";
+
+                statusElement.textContent =
+                    "Lecteur actif. Approchez un patch NFC.";
+
+                const activateButton =
+                    document.getElementById(
+                        "activateBtn"
+                    );
+
+                activateButton.textContent =
+                    "Lecteur NFC actif";
+
+                activateButton.disabled = true;
+
+                ndef.onreading = (event) => {
+                    handleTagRead(
+                        event.serialNumber
+                    );
+                };
+
+                ndef.onreadingerror = () => {
+                    statusElement.className =
+                        "status-line err";
+
+                    statusElement.textContent =
+                        "La lecture NFC a échoué. Réessayez.";
+                };
+
+            } catch (error) {
+                statusElement.className =
+                    "status-line err";
+
+                statusElement.textContent =
+                    "Erreur d’activation : " +
+                    error.message;
+
+                document.getElementById(
+                    "fallbackCard"
+                ).style.display = "block";
+            }
+        }
+    );
+</script>
+
+</body>
+</html>

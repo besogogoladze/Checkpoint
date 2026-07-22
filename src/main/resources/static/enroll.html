@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Administration NFC — Rondes NFC</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+    >
+</head>
+
+<body class="app-page">
+
+<header id="header"></header>
+
+<main class="page-shell">
+
+    <section class="page-heading">
+        <span class="page-eyebrow">Configuration</span>
+
+        <h1>Administration des patches NFC</h1>
+
+        <p>
+            Associez un patch NFC à une zone sécurisée et consultez
+            l’état du matériel actuellement enregistré.
+        </p>
+    </section>
+
+    <div class="enroll-layout">
+
+        <section class="card">
+
+            <div class="card-header">
+                <div>
+                    <h2>Associer un patch</h2>
+
+                    <p>
+                        Sélectionnez une zone puis scannez le patch.
+                    </p>
+                </div>
+            </div>
+
+            <div class="enroll-info">
+                Le patch sera immédiatement associé à la zone sélectionnée.
+            </div>
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label for="roomSelect">
+                        Zone à équiper
+                    </label>
+
+                    <select id="roomSelect"></select>
+                </div>
+
+                <button id="scanBtn" class="big-btn">
+                    Scanner et associer le patch
+                </button>
+
+            </div>
+
+            <div id="status" class="status-line"></div>
+
+        </section>
+
+        <section class="card">
+
+            <div class="card-header">
+                <div>
+                    <h2>Inventaire des patches</h2>
+
+                    <p>
+                        Liste des patches enregistrés et de leur état.
+                    </p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Zone associée</th>
+                        <th>Identifiant UID</th>
+                        <th>État</th>
+                    </tr>
+                    </thead>
+
+                    <tbody id="patchTableBody">
+                    <tr>
+                        <td colspan="3" class="table-empty">
+                            Chargement de l’inventaire...
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </section>
+
+    </div>
+
+</main>
+
+<script src="app-common.js"></script>
+
+<script>
+    requireAuth(["CHEF_DE_POSTE", "DIRECTION"]);
+
+    renderHeader("header", "Administration");
+
+    const statusElement =
+        document.getElementById("status");
+
+    let rooms = [];
+
+    async function loadRooms() {
+        try {
+            rooms = await apiFetch("/api/rooms");
+
+            const select =
+                document.getElementById("roomSelect");
+
+            select.innerHTML = rooms.map((room) => `
+                <option value="${room.id}">
+                    ${room.name}
+                    ${room.building ? ` — ${room.building}` : ""}
+                </option>
+            `).join("");
+
+        } catch (error) {
+            statusElement.className = "status-line err";
+            statusElement.textContent =
+                "Impossible de charger les zones.";
+        }
+    }
+
+    async function loadPatches() {
+        try {
+            const patches =
+                await apiFetch("/api/patches");
+
+            const body =
+                document.getElementById("patchTableBody");
+
+            if (patches.length === 0) {
+                body.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="table-empty">
+                            Aucun patch enregistré.
+                        </td>
+                    </tr>
+                `;
+
+                return;
+            }
+
+            body.innerHTML = patches.map((patch) => {
+                const level = patch.damaged
+                    ? "ROUGE"
+                    : (
+                        patch.active
+                            ? "VERT"
+                            : "ORANGE"
+                    );
+
+                const statusLabel = patch.damaged
+                    ? "Endommagé"
+                    : (
+                        patch.active
+                            ? "Opérationnel"
+                            : "Inactif"
+                    );
+
+                return `
+                    <tr>
+                        <td>
+                            <strong>
+                                ${patch.roomName || "Non assigné"}
+                            </strong>
+                        </td>
+
+                        <td class="uid-cell">
+                            ${patch.tagUid}
+                        </td>
+
+                        <td>
+                            <span class="badge ${level}">
+                                ${statusLabel}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+
+        } catch (error) {
+            document.getElementById(
+                "patchTableBody"
+            ).innerHTML = `
+                <tr>
+                    <td colspan="3" class="table-error">
+                        Impossible de charger l’inventaire.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    async function associate(tagUid) {
+        const roomId = parseInt(
+            document.getElementById("roomSelect").value,
+            10
+        );
+
+        statusElement.className = "status-line";
+        statusElement.textContent =
+            "Association en cours...";
+
+        try {
+            await apiFetch(
+                "/api/patches/enroll",
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        tagUid,
+                        roomId
+                    })
+                }
+            );
+
+            statusElement.className =
+                "status-line ok";
+
+            statusElement.textContent =
+                "Le patch a été associé avec succès.";
+
+            await loadPatches();
+
+        } catch (error) {
+            statusElement.className =
+                "status-line err";
+
+            statusElement.textContent =
+                "Erreur : " + error.message;
+        }
+    }
+
+    document.getElementById(
+        "scanBtn"
+    ).addEventListener(
+        "click",
+        async () => {
+            if (!("NDEFReader" in window)) {
+                const manual = prompt(
+                    "Web NFC n’est pas disponible.\n" +
+                    "Saisissez l’UID du patch pour la démonstration :"
+                );
+
+                if (manual) {
+                    await associate(manual.trim());
+                }
+
+                return;
+            }
+
+            try {
+                const ndef = new NDEFReader();
+
+                await ndef.scan();
+
+                statusElement.className =
+                    "status-line ok";
+
+                statusElement.textContent =
+                    "Lecteur actif. Approchez le patch NFC.";
+
+                ndef.onreading = (event) => {
+                    associate(event.serialNumber);
+                };
+
+            } catch (error) {
+                statusElement.className =
+                    "status-line err";
+
+                statusElement.textContent =
+                    "Erreur NFC : " + error.message;
+            }
+        }
+    );
+
+    loadRooms();
+    loadPatches();
+</script>
+
+</body>
+</html>
